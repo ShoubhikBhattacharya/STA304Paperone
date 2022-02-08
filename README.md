@@ -1,1 +1,2 @@
 # STA304Paperone
+Toronto COVID-19 Cases data was obtained from the Toronto Open Data Portal to analyze the impact of the COVID-19 virus on Toronto neighbourhoods hardest hit by COVID-19 infections. While COVID-19 infection cases have risen since the onset of the pandemic in early 2020, the impact of COVID-19 across Toronto communities has differed vastly. This analysis examines cases, icu admissions and hospitalizations per capita and evaluates the impact of COVID-19 on the most affected communities.
