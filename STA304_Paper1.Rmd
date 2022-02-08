@@ -1,0 +1,272 @@
+---
+title: "The impact of COVID-19 infection cases, ICU admissions and hospitalizations in Toronto neighbourhoods"
+author: "Shoubhik Bhattacharya"
+date: "31 January, 2022"
+output:
+  pdf_document: default
+abstract: 'Toronto COVID-19 Cases data was obtained from the Toronto Open Data Portal to analyze the impact of the COVID-19 virus on Toronto neighbourhoods hardest hit by COVID-19 infections. While COVID-19 infection cases have risen since the onset of the pandemic in early 2020, the impact of COVID-19 across Toronto communities has differed vastly. This analysis examines cases, icu admissions and hospitalizations per capita and evaluates the impact of COVID-19 on the most affected communities.'
+---
+
+## 1.Introduction
+COVID-19, also referred to as the novel corona virus, is an acute respiratory infection which was first identified in Wuhan, Hubei province of China, in January 2020. Since then, the virus has spread extremely quickly and significantly by using people as carriers for the infection and hence, reaching almost every part of the world! Apart from infecting over hundreds of millions of individuals worldwide, this deadly virus has also contributed to millions of hospitalizations and deaths (Ciotti et al., 2020)
+While COVID-19 continues to have a massive global impact after being referred to as a "global pandemic" by the WHO, it has also had a significant impact in the neighborhoods of Toronto, Ontario, Canada through tremendously large infection case numbers, hospitalizations and ICU admissions. 
+
+Given that COVID-19 is easily transmissible and can cause severe health conditions, it is important to keep track of the spread of infections through "COVID case counts", which provides an overview of how this infectious virus has impacted a certain community. Data of infections, hospitalizations and ICU admissions helps us monitor the situation in our community and provide useful insight into helping develop key strategies to defeat this virus.
+In Toronto, COVID-19 "hotspots" were assigned based on postal codes that were selected after obtaining advice from the Ontario's advisory Science table. While the procedure of picking "hotspots" was not disclosed to the general public by the Ontario government, it would be interesting to conduct an analysis to examine how different neighbourhoods compared to each other in terms of COVID infections, hospitalizations, and ICU admissions. 
+
+In the following paper, I have conducted a comprehensive analysis of 
+
+## 2.Data
+This report uses data of COVID-19 cases in Toronto (Data, 2020) published by Toronto Public Health in the Toronto Open Data portal (Gelfand, 2020). Toronto COVID-19 cases data was last updated on February 2, 2022. The raw data includes individual level data of individuals that have been infected with COVID-19, along with the age group, neighbourhood residence, infection source, gender and ICU/hospitalization records. Moreover, data from Neighbourhood Crime Rates Data (Data, 2020) was used from Toronto Open Data Portal (Gelfand, 2020) to obtain population numbers across all 140 neighbourhoods in Toronto. The exploratory analysis for this project was conducted using R (R core team, 2020) and used libraries tidyverse (Wickham et al., 2019), janitor and dplyr (Wickham et al., 2021).
+
+Since the raw data consisted of data on the individual level, I decided to create a new dataframe where case counts were grouped by neighbourhoods in Toronto. This was done as it would be possible to conduct a more comprehensive analysis based on how COVID-19 has affected Toronto neighbourhoods rather than specific individuals. Using these case count values, neighbourhoods were accordingly ordered and the most (5 neighbourhoods with the largest COVID case counts in Toronto) and least (5 neighbourhoods with the fewest COVID case counts in Toronto) affected communities were picked for this analysis. Furthermore, we were able to obatin population metrics of all 140 Toronto neighbourhoods and hence, include in our analysis the impact of each neighbourhood not solely on the nominal value of covid cases but on the cases/capita (COVID cases/ population).
+
+First, it is important to get an idea of how population numbers and covid case counts vary. The table below reports the mean, min, max and standard deviations of populations and covid-case couunts for all 140 neighbourhoods in Toronto. KableExtra (Zhu, 2020) was employed to produce the summary results in Table 1 below - 
+
+
+Next, the top 5 most covid-infected neighbourhoods in toronto were used to examine Thow the large nominal values of covid infections (covid cases) in these Toronto communities compared with respect to their respective population densities. Figure 1, as shown below, was created using ggplot2 (Wickham, 2016). Neighbourhoods are order with respect to their covid case counts in an ascending order format (The community with the most covid infections in Toronto appears last on the graph while the 5th most affected community appears to the first).
+
+```{r, include=FALSE, echo=FALSE}
+#install.packages("rmarkdown")
+#install.packages("knitr")
+```
+
+```{r, include=FALSE, echo=FALSE}
+library(plyr)
+library(knitr)
+library(rmarkdown)
+library(ggplot2)
+library(psych)
+library(tibble)
+library(kableExtra)
+```
+
+```{r, include=FALSE}
+library(opendatatoronto)
+library(tidyverse)
+library(ggrepel)
+library(janitor)
+library(lubridate)
+library(visdat)
+```
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, include=FALSE}
+alldata <- opendatatoronto::list_packages(limit = 500)
+alldata
+```
+
+
+```{r, echo=FALSE}
+# Downloading the Packages
+package <- show_package("64b54586-6180-4485-83eb-81e8fae3b8fe")
+resources <- list_package_resources("64b54586-6180-4485-83eb-81e8fae3b8fe")
+testing <- filter(resources, tolower(format) %in%
+                    c('csv', 'geojson'))
+df <- filter(testing, row_number()==1) %>% get_resource()
+cases_data <- clean_names(df)
+
+#Displaying the first 5 rows of the dataset
+cases_data
+```
+```{r, echo=FALSE}
+package1 <- show_package("fc4d95a6-591f-411f-af17-327e6c5d03c7")
+resources1 <- list_package_resources("fc4d95a6-591f-411f-af17-327e6c5d03c7")
+
+population <- filter(resources1, tolower(format) %in%
+                    c('csv', 'geojson'))
+df1 <- filter(population, row_number()==1) %>% get_resource()
+pop_data <- clean_names(df1)
+pop_data
+
+#package <- show_package("64b54586-6180-4485-83eb-81e8fae3b8fe")
+#resources <- list_package_resources("64b54586-6180-4485-83eb-81e8fae3b8fe")
+#testing <- filter(resources, tolower(format) %in%
+                 #   c('csv', 'geojson'))
+#df <- filter(testing, row_number()==1) %>% get_resource()
+#cases_data <- clean_names(df)
+
+#Displaying the first 5 rows of the dataset
+#cases_data
+```
+
+
+```{r, echo=FALSE, include=FALSE}
+# Sanity checks
+unique(cases_data$age_group)
+unique(cases_data$neighbourhood_name)
+unique(cases_data$outbreak_associated)
+```
+
+```{r, echo=FALSE, include=FALSE}
+# Missing Values
+cases_data %>% 
+  summarise_all(list(~sum(is.na(.))))
+#janitor::get_dupes(cases_data)
+```
+
+```{r, echo=FALSE, include=FALSE}
+#Checking duplicates
+janitor::get_dupes(cases_data)
+```
+
+```{r, echo=FALSE, include=FALSE}
+vis_dat(cases_data, warn_large_data = F)
+vis_miss(cases_data, warn_large_data = F)
+```
+
+```{r, echo=FALSE, include=FALSE}
+#group by
+#group_by(cases_data, (neighbourhood_name))
+#cases_data %>% group_by(neighbourhood_name) %>% summarise(count = n())
+counts <- aggregate(rep(1, length(cases_data$neighbourhood_name)), by = list(cases_data$neighbourhood_name), sum)
+icu <- cases_data %>% 
+  group_by(neighbourhood_name) %>% 
+  summarise(
+    icu_count = sum(ever_in_icu=="Yes"))
+hospitalizations <- cases_data %>% 
+  group_by(neighbourhood_name) %>% 
+  summarise(
+    hosp_count = sum(ever_hospitalized=="Yes"))
+
+counts$x <- sort(counts$x)
+pro <- counts %>% 
+  rename(
+    neighbourhood = Group.1,
+    case_count = x
+    )
+counts
+lowest <- head(pro)
+lowest
+highest <- tail(pro)
+highest
+lowest_counts <- ggplot(data = lowest, aes(x = n$Group.1)) +
+    geom_bar(stat="identity", aes(x = lowest$Group.1, y = lowest$x), width = 0.3)
+highest_counts <- ggplot(data = highest, aes(x = n$Group.1)) +
+    geom_bar(stat="identity", aes(x = highest$Group.1, y = highest$x), width = 0.3)
+```
+
+```{r, include=FALSE}
+figure <- tail(counts, n = 10)
+figure
+```
+
+
+
+```{r, echo=FALSE, include=FALSE}
+cases = rename(counts, neighbourhood = x, case_counts = Group.1)
+m <- describe(cases) %>%
+  kbl(caption = "Variation of Covid case numbers across Toronto neighbourhoods") %>%
+  kable_classic(full_width = F, html_font = "Cambria")
+m
+```
+
+First, the top 10 most covid-infected neighbourhoods in Toronto were used to examine Thow the large nominal values of covid infections (covid cases) in these Toronto communities compared with respect to their respective population densities. Figure 1, as shown below, was created using ggplot2 (Wickham, 2016). Neighbourhoods are order with respect to their covid case counts in an ascending order format (The community with the most covid infections in Toronto appears last on the graph while the 10th most affected community appears to the first).
+
+```{r, echo=FALSE, warning=FALSE}
+final1 <- inner_join(pro, pop_data)
+final2 <- tail(final1, n = 10)
+final <- final2 %>% 
+  rename(
+    population = f2020_population_projection,
+    )
+final
+figure1 <- ggplot(data = final, aes(x = n$neighbourhood)) +
+    geom_bar(stat="identity", aes(x = final$neighbourhood, y = final$case_count, fill = final$population), width = 0.3) + labs(title="Figure 1: 10 most affected neighbourhoods in Toronto based on COVID-19 cases", x ="Neighbourhood name", y = "Cases", fill = "Population") + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+figure1
+```
+As observed in Figure 1, the Toronto neighbourhood ranks first in terms of total COVID-19 cases is Yorkdale-Glen Park with 6448 cases till date. Factoring in per capita case counts provide a larger picture of the impact of COVID-19 cases on such communities. For example, Woodbine-Lumsden, which has around only half the population count of the Yorkdale-Glen Park neighbourhood, has a total of 5457 cases. This value of cases is only 991 cases short of Yorkdale-Glen Park, and hence, the impact of COVID-19 on Woodbine-Lumsden can be argued to be more drastic!
+
+```{r, echo=FALSE}
+final1
+myvars1 <- c("neighbourhood", "f2020_population_projection", "case_count")
+myvars2 <- final1[myvars1]
+myvars2
+myvars2 <- myvars2 %>% 
+  rename(
+    population = f2020_population_projection,
+    cases = case_count
+    )
+myvars2
+```
+It is important to get an idea of how population numbers and covid case counts vary. The table below reports the mean, min, max and standard deviations of populations and covid-case counts for all 140 neighbourhoods in Toronto. KableExtra (Zhu, 2020) was employed to produce the summary results in Table 1 below - 
+
+```{r, echo=FALSE}
+#cases = rename(counts, neighbourhood = x, case_counts = Group.1)
+l <- myvars2 #%>%
+  #select(c(2, 6))
+m <- summary(l) %>%
+  kbl(caption = "Table 1: Variation of Covid case numbers and population values across all Toronto neighbourhoods") %>%
+  kable_classic(full_width = F, html_font = "Times New Roman")
+m
+```
+As expected, all neighbourhoods in Toronto with largest COVID-19 case counts have significantly larger case numbers than the average case counts from all Toronto neighbourhoods. 
+
+As observed in the table, The population mean of all neighbourhoods across Toronto is 21874, it is interesting to note that all neighbourhoods in Toronto with high case counts lie below this population mean except for Woburn, Willowridge-Martingrove-Richview and York University Heights. These 3 neighbourhoods consisting of larger than average populations represent neighbourhoods that may not have experienced a significant impact of infections despite having a large number of cases since the cases per capita values would be smaller than other neighbourhoods mentioned in the table. The detailed values of these population counts are shown in Table 2 below - 
+
+```{r, echo=FALSE}
+myvars <- c("neighbourhood", "population")
+newdata <- final[myvars]
+newdata1 <- (newdata) %>%
+  kbl(caption = "Table 1: Population counts of top 10 most infected neighbourhoods in Toronto") %>%
+  kable_classic(full_width = F, html_font = "Times New Roman")
+newdata1
+```
+Conversely, neighbourhoods such as Woodbine-Lumsden, Woodbine Corridor, Yonge-Eglinton, Yonge-St.Clair and Wychwood have population levels significantly lower than the population mean. This tells us that these communities experienced a greater communal impact of COVID-19 infections as more people per capita in these communities were infected than others with high COVID-19 case counts. 
+
+In order to evaluate the real impact of COVID-19 on Toronto neighbourhoods, I will evaluate COVID-19 ICU Admissions and COVID-19 hospitalizations in a similiar manner.
+
+```{r, echo=FALSE}
+icu$icu_count <- sort(icu$icu_count)
+icu1 <- na.omit(icu)
+icu2 <- tail(icu1, n = 10)
+final3 <- icu2 %>% 
+  rename(
+    neighbourhood = neighbourhood_name
+    )
+final4 <- inner_join(final3, pop_data)
+final4
+figure2 <- ggplot(data = final4, aes(x = n$neighbourhood)) +
+    geom_bar(stat="identity", aes(x = final4$neighbourhood, y = final4$icu_count, fill = final4$f2020_population_projection), width = 0.3) + labs(title="Figure 2:Most affected Toronto neighbourhoods based on COVID-19 ICU admission", x ="Neighbourhood name", y = "ICU Admissions", fill = "Population") + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+figure2
+```
+Figure 2 shows a similiar pattern to Figure 1 - the 10 neighbourhoods with the highest COVID-19 cases have the highest ICU admission counts. Hence, the impact of COVID-19 ICU  Admissions can be interpreted similiarly compared to COVID-19 case counts. 
+Figure 3 shows a similiar trend too as shown below!
+
+```{r, echo=FALSE}
+hospitalizations$hosp_count <- sort(hospitalizations$hosp_count)
+hosp1 <- na.omit(hospitalizations)
+hosp2 <- tail(hosp1, n = 10)
+new1 <- hosp2 %>% 
+  rename(
+    neighbourhood = neighbourhood_name
+    )
+new2 <- inner_join(new1, pop_data)
+new2
+figure3 <- ggplot(data = new2, aes(x = n$neighbourhood)) +
+    geom_bar(stat="identity", aes(x = new2$neighbourhood, y = new2$hosp_count, fill = final4$f2020_population_projection), width = 0.3) + labs(title="Figure 1: COVID-19 hospitalizations in 10 most affected neighbourhoods in Toronto", x ="Neighbourhood name", y = "Cases", fill = "Population") + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+figure3
+```
+
+
+## 3.References 
+1. Marco Ciotti, Massimo Ciccozzi, Alessandro Terrinoni, Wen-Can Jiang, Cheng-Bin Wang & Sergio Bernardini (2020) The COVID-19 pandemic, Critical Reviews in Clinical Laboratory Sciences, 57:6, 365-388, DOI: 10.1080/10408363.2020.1783198
+2. Data, Toronto Open. 2020. “COVID-19 Cases in Toronto” https://open.toronto.ca/dataset/covid-19-cases-in-toronto/.
+3. R Core Team. 2020. R: A Language and Environment for Statistical Computing. Vienna, Austria: R
+Foundation for Statistical Computing. https://www.R-project.org/.
+4.Wickham, Hadley, Mara Averick, Jennifer Bryan, Winston Chang, Lucy D’Agostino McGowan, Romain
+François, Garrett Grolemund, et al. 2019. “Welcome to the tidyverse.” Journal of Open Source Software 4
+(43): 1686. https://doi.org/10.21105/joss.01686.
+5.Wickham, Hadley, Romain François, Lionel Henry, and Kirill Müller. 2021. Dplyr: A Grammar of Data
+Manipulation. https://CRAN.R-project.org/package=dplyr.
+6.Wickham, Hadley, Jim Hester, and Winston Chang. 2020. Devtools: Tools to Make Developing R Packages
+Easier. https://CRAN.R-project.org/package=devtools.
+7.Zhu, Hao. 2020. KableExtra: Construct Complex Table with ’Kable’ and Pipe Syntax. https://CRAN.Rproject.org/package=kableExtra.
+
+
+
+
+
